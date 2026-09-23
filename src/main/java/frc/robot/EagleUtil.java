@@ -1,23 +1,23 @@
 package frc.robot;
 
 import dev.doglog.DogLog;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.math.geometry.Rotation2d;
+import org.wpilib.math.geometry.Translation2d;
+import org.wpilib.math.geometry.Translation3d;
+import org.wpilib.math.kinematics.ChassisVelocities;
+import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.MatchState;
+import org.wpilib.framework.RobotBase;
+import org.wpilib.command2.Command;
+import org.wpilib.command2.Commands;
 import frc.robot.subsystems.swerve.SwerveSubsystem;
 
 public class EagleUtil {
 
   public static boolean isRedAlliance() {
-    return DriverStation.getAlliance().isPresent()
-        && DriverStation.getAlliance().get() == Alliance.Red;
+    return MatchState.getAlliance().isPresent()
+        && MatchState.getAlliance().get() == Alliance.RED;
   }
 
   public static double getRotationalHub(Pose2d pose) {
@@ -170,12 +170,11 @@ public class EagleUtil {
                     DogLog.log("distance to tar", dist);
                     DogLog.log("fuelTimeInAir", t);
 
-                    ChassisSpeeds robotVelocityChassis =
-                        ChassisSpeeds.fromRobotRelativeSpeeds(
-                            drivetrain.getCachedState().Speeds,
+                    ChassisVelocities robotVelocityChassis =
+                        drivetrain.getCachedState().Velocity.toFieldRelative(
                             drivetrain.getCachedState().Pose.getRotation());
-                    double robotDx = robotVelocityChassis.vxMetersPerSecond;
-                    double robotDy = robotVelocityChassis.vyMetersPerSecond;
+                    double robotDx = robotVelocityChassis.vx;
+                    double robotDy = robotVelocityChassis.vy;
 
                     double a = drivetrain.getCachedState().Pose.getRotation().getRadians();
                     Translation3d initVelocity =

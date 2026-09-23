@@ -1,20 +1,18 @@
 package frc.robot.subsystems.aprilTagCam;
 
-import com.ctre.phoenix6.Utils;
 import dev.doglog.DogLog;
-import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Transform3d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.numbers.N1;
-import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.net.PortForwarder;
-import edu.wpi.first.wpilibj.Alert;
-import edu.wpi.first.wpilibj.Alert.AlertType;
-import edu.wpi.first.wpilibj.Filesystem;
+import org.wpilib.vision.apriltag.AprilTagFieldLayout;
+import org.wpilib.math.linalg.Matrix;
+import org.wpilib.math.linalg.VecBuilder;
+import org.wpilib.driverstation.Alert;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.math.geometry.Pose3d;
+import org.wpilib.math.geometry.Transform3d;
+import org.wpilib.math.kinematics.ChassisVelocities;
+import org.wpilib.math.numbers.N1;
+import org.wpilib.math.numbers.N3;
+import org.wpilib.net.PortForwarder;
+import org.wpilib.system.Filesystem;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -37,7 +35,7 @@ public class AprilTagCam {
   private final PhotonPoseEstimator photonEstimator;
   private final Transform3d robotToCam;
   private final Supplier<Pose2d> currRobotPose;
-  private final Supplier<ChassisSpeeds> currRobotSpeed;
+  private final Supplier<ChassisVelocities> currRobotSpeed;
   private final String ntKey;
   private final Alert visionNotConnected;
   private Pose3d[] estimPoseArray = new Pose3d[1];
@@ -50,7 +48,7 @@ public class AprilTagCam {
       Transform3d robotToCam,
       VisionConsumer addVisionMeasurement,
       Supplier<Pose2d> currRobotPose,
-      Supplier<ChassisSpeeds> currRobotSpeed) {
+      Supplier<ChassisVelocities> currRobotSpeed) {
 
     PortForwarder.add(5800, "photonvision.local", 5800);
     try {
@@ -68,7 +66,7 @@ public class AprilTagCam {
     this.currRobotPose = currRobotPose;
     this.currRobotSpeed = currRobotSpeed;
 
-    visionNotConnected = new Alert(name + " NOT CONNECTED", AlertType.kError);
+    visionNotConnected = new Alert(name + " NOT CONNECTED", Alert.Level.HIGH);
 
     photonEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, robotToCam);
 
@@ -80,6 +78,8 @@ public class AprilTagCam {
    * NOTE: also updates the connection check for the camera
    */
   public void updatePoseEstim() {
+    DogLog.time(cam.getName());
+
     boolean isConnected = cam.isConnected();
     Pose2d robotPose = currRobotPose.get();
     Pose3d robotPose3d = new Pose3d(robotPose);
@@ -134,7 +134,7 @@ public class AprilTagCam {
       }
 
       Pose2d pos = estimPose3d.toPose2d(); // yay :0 im so happy
-      double timestamp = Utils.fpgaToCurrentTime(targetPose.getTimestampSeconds());
+      double timestamp = targetPose.getTimestampSeconds();
       Matrix<N3, N1> sd = findSD(optionalEstimPose, optionalEstimPose.get().targetsUsed);
       acceptedPoseArray[0] = pos;
 
@@ -147,6 +147,8 @@ public class AprilTagCam {
 
     DogLog.log(ntKey + "April Tag Cam Connected", isConnected);
     visionNotConnected.set(!isConnected);
+
+    DogLog.timeEnd(ntKey);
   }
 
   /**
@@ -169,7 +171,7 @@ public class AprilTagCam {
    * @return are they filtered?
    */
   public boolean filterResults(
-      Pose3d estimPose3d, EstimatedRobotPose optionalEstimPose, ChassisSpeeds speed) {
+      Pose3d estimPose3d, EstimatedRobotPose optionalEstimPose, ChassisVelocities speed) {
     estimPoseArray[0] = estimPose3d;
     // If vision's pose estimation is above/below the ground
     double upperZBound = AprilTagCamConstants.Z_TOLERANCE;
@@ -234,10 +236,10 @@ public class AprilTagCam {
     }
 
     // if velocity or rotaion is too high
-    double xVel = speed.vxMetersPerSecond;
-    double yVel = speed.vyMetersPerSecond;
+    double xVel = speed.vx;
+    double yVel = speed.vy;
     double vel = Math.sqrt(Math.pow(yVel, 2) + Math.pow(xVel, 2));
-    double rotation = speed.omegaRadiansPerSecond;
+    double rotation = speed.omega;
 
     if (vel > AprilTagCamConstants.MAX_VELOCITY || rotation > AprilTagCamConstants.MAX_ROTATION) {
       DogLog.log(ntKey + "Rejected Pose", estimPoseArray);

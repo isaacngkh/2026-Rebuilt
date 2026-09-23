@@ -1,12 +1,13 @@
 package frc.robot.commands.autonomous;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.math.geometry.Rotation2d;
+import org.wpilib.framework.RobotBase;
+import org.wpilib.command2.Commands;
+import org.wpilib.command2.SequentialCommandGroup;
+import org.wpilib.driverstation.DriverStationErrors;
+
 import frc.robot.EagleUtil;
 import frc.robot.subsystems.indexer.IndexerSubsystem;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
@@ -29,7 +30,7 @@ public class Preload extends SequentialCommandGroup {
           Commands.parallel(shooter.runVoltage(0), indexer.runVoltage(0)));
 
     } catch (Exception e) {
-      DriverStation.reportError("Path Not Found: " + e.getMessage(), e.getStackTrace());
+      DriverStationErrors.reportError("Path Not Found: " + e.getMessage(), e.getStackTrace());
     }
   }
 }

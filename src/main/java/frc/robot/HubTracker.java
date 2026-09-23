@@ -2,11 +2,17 @@
 
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Seconds;
+import static org.wpilib.units.Units.Seconds;
 
-import edu.wpi.first.units.measure.Time;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import org.wpilib.units.Units;
+import org.wpilib.units.measure.Time;
+
+import dev.doglog.DogLog;
+
+import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.MatchState;
+import org.wpilib.driverstation.RobotState;
+
 import java.util.Optional;
 
 public class HubTracker {
@@ -81,7 +87,7 @@ public class HubTracker {
    * Alliance}. Will return {@code false} if disabled or in between auto and teleop.
    */
   public static boolean isActive(Shift shift) {
-    Optional<Alliance> alliance = DriverStation.getAlliance();
+    Optional<Alliance> alliance = MatchState.getAlliance();
     return alliance.isPresent() && isActive(alliance.get(), shift);
   }
 
@@ -91,7 +97,7 @@ public class HubTracker {
    */
   public static boolean isActive() {
     Optional<Shift> currentShift = getCurrentShift();
-    Optional<Alliance> alliance = DriverStation.getAlliance();
+    Optional<Alliance> alliance = MatchState.getAlliance();
     return currentShift.isPresent()
         && alliance.isPresent()
         && isActive(alliance.get(), currentShift.get());
@@ -112,7 +118,7 @@ public class HubTracker {
    */
   public static boolean isActiveNext() {
     Optional<Shift> nextShift = getNextShift();
-    Optional<Alliance> alliance = DriverStation.getAlliance();
+    Optional<Alliance> alliance = MatchState.getAlliance();
     return nextShift.isPresent()
         && alliance.isPresent()
         && isActive(alliance.get(), nextShift.get());
@@ -124,13 +130,13 @@ public class HubTracker {
    * available.
    */
   public static Optional<Alliance> getAutoWinner() {
-    String msg = DriverStation.getGameSpecificMessage();
+    String msg = MatchState.getGameData().orElse("");
     char msgChar = msg.length() > 0 ? msg.charAt(0) : ' ';
     switch (msgChar) {
       case 'B':
-        return Optional.of(Alliance.Blue);
+        return Optional.of(Alliance.BLUE);
       case 'R':
-        return Optional.of(Alliance.Red);
+        return Optional.of(Alliance.RED);
       default:
         return Optional.empty();
     }
@@ -141,12 +147,12 @@ public class HubTracker {
    * if in between auto and teleop
    */
   public static double getMatchTime() {
-    if (DriverStation.isAutonomous()) {
-      if (DriverStation.getMatchTime() < 0) return DriverStation.getMatchTime();
-      return 20 - DriverStation.getMatchTime();
-    } else if (DriverStation.isTeleop()) {
-      if (DriverStation.getMatchTime() < 0) return DriverStation.getMatchTime();
-      return 160 - DriverStation.getMatchTime();
+    if (RobotState.isAutonomous()) {
+      if (MatchState.getMatchTime() < 0) return MatchState.getMatchTime();
+      return 20 - MatchState.getMatchTime();
+    } else if (RobotState.isTeleop()) {
+      if (MatchState.getMatchTime() < 0) return MatchState.getMatchTime();
+      return 160 - MatchState.getMatchTime();
     }
     return -1;
   }
@@ -190,5 +196,55 @@ public class HubTracker {
     BOTH,
     AUTO_WINNER,
     AUTO_LOSER
+  }
+
+  public static boolean isHubActiveCustom() {
+    Shift currentShift = HubTracker.getCurrentShift().orElse(Shift.SHIFT_1);
+            double timeRemaining =
+                HubTracker.timeRemainingInCurrentShift()
+                    .orElse(Time.ofBaseUnits(0, Units.Second))
+                    .in(Units.Seconds);
+            DogLog.log("Hub Status/Time Remaining in Shift", timeRemaining);
+            DogLog.log("Hub Status/Current Shift", currentShift.name());
+
+            double upperThreshold = 3;
+            double lowerThreshold = 24;
+
+            if (HubTracker.getAutoWinner().orElse(Alliance.RED) == Alliance.RED) {
+              // Red Win
+              if (EagleUtil.isRedAlliance()) {
+                // as Red Team (win)
+                if (currentShift == Shift.SHIFT_1 || currentShift == Shift.SHIFT_3) {
+                  return timeRemaining >= lowerThreshold
+                      || timeRemaining <= upperThreshold
+                      || HubTracker.isActive();
+                }
+              } else {
+                // as Blue Team (loss)
+                if (currentShift == Shift.SHIFT_2 || currentShift == Shift.SHIFT_4) {
+                  return timeRemaining >= lowerThreshold
+                      || timeRemaining <= upperThreshold
+                      || HubTracker.isActive();
+                }
+              }
+            } else {
+              // Blue Win
+              if (!EagleUtil.isRedAlliance()) {
+                // as Blue Team (win)
+                if (currentShift == Shift.SHIFT_1 || currentShift == Shift.SHIFT_3) {
+                  return timeRemaining >= lowerThreshold
+                      || timeRemaining <= upperThreshold
+                      || HubTracker.isActive();
+                }
+              } else {
+                // as Red Team (loss)
+                if (currentShift == Shift.SHIFT_2 || currentShift == Shift.SHIFT_4) {
+                  return timeRemaining >= lowerThreshold
+                      || timeRemaining <= upperThreshold
+                      || HubTracker.isActive();
+                }
+              }
+            }
+            return HubTracker.isActive();
   }
 }

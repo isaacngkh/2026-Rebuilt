@@ -4,7 +4,7 @@
 
 package frc.robot;
 
-import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
+import org.wpilib.math.interpolation.InterpolatingDoubleTreeMap;
 
 /** Add your docs here. */
 public class ShotCalculator {

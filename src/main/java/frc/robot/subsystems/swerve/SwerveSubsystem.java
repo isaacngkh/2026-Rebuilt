@@ -16,26 +16,28 @@ import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import dev.doglog.DogLog;
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj.Alert;
-import edu.wpi.first.wpilibj.Alert.AlertType;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.Notifier;
-import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.Subsystem;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
+import org.wpilib.math.util.MathUtil;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.math.geometry.Rotation2d;
+import org.wpilib.math.geometry.Transform2d;
+import org.wpilib.math.geometry.Translation2d;
+import org.wpilib.math.kinematics.ChassisVelocities;
+import org.wpilib.driverstation.Alert;
+import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.DriverStationErrors;
+import org.wpilib.driverstation.MatchState;
+import org.wpilib.driverstation.RobotState;
+import org.wpilib.system.Notifier;
+import org.wpilib.system.RobotController;
+import org.wpilib.smartdashboard.SmartDashboard;
+import org.wpilib.command2.Command;
+import org.wpilib.command2.Commands;
+import org.wpilib.command2.Subsystem;
+import org.wpilib.command2.button.CommandNiDsXboxController;
+import org.wpilib.command2.button.Trigger;
 import frc.robot.EagleUtil;
 import frc.robot.FieldConstants;
+import frc.robot.RobotContainer;
 import frc.robot.commands.AlignToPose;
 import java.util.function.Supplier;
 
@@ -59,30 +61,30 @@ public class SwerveSubsystem extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder
   }
 
   private Alert frontLeftDriveConnectedAlert =
-      new Alert("Front left drive motor is not connected!", AlertType.kError);
+      new Alert("Front left drive motor is not connected!", Alert.Level.HIGH);
   private Alert frontLeftTurnConnectedAlert =
-      new Alert("Front left turn motor is not connected!", AlertType.kError);
+      new Alert("Front left turn motor is not connected!", Alert.Level.HIGH);
   private Alert frontLeftEncoderConnectedAlert =
-      new Alert("Front left encoder is not connected!", AlertType.kError);
+      new Alert("Front left encoder is not connected!", Alert.Level.HIGH);
   private Alert backLeftDriveConnectedAlert =
-      new Alert("Back left drive motor is not connected!", AlertType.kError);
+      new Alert("Back left drive motor is not connected!", Alert.Level.HIGH);
   private Alert backLeftTurnConnectedAlert =
-      new Alert("Back left turn motor is not connected!", AlertType.kError);
+      new Alert("Back left turn motor is not connected!", Alert.Level.HIGH);
   private Alert backleftEncoderConnectedAlert =
-      new Alert("Back left encoder is not connected!", AlertType.kError);
+      new Alert("Back left encoder is not connected!", Alert.Level.HIGH);
   private Alert frontRightDriveConnectedAlert =
-      new Alert("Front right drive motor is not connected!", AlertType.kError);
+      new Alert("Front right drive motor is not connected!", Alert.Level.HIGH);
   private Alert frontRightTurnConnectedAlert =
-      new Alert("Front right turn motor is not connected!", AlertType.kError);
+      new Alert("Front right turn motor is not connected!", Alert.Level.HIGH);
   private Alert frontrightEncoderConnectedAlert =
-      new Alert("Front right encoder is not connected!", AlertType.kError);
+      new Alert("Front right encoder is not connected!", Alert.Level.HIGH);
   private Alert backRightDriveConnectedAlert =
-      new Alert("Back right drive motor is not connected!", AlertType.kError);
+      new Alert("Back right drive motor is not connected!", Alert.Level.HIGH);
   private Alert backRightTurnConnectedAlert =
-      new Alert("Back right turn motor is not connected!", AlertType.kError);
+      new Alert("Back right turn motor is not connected!", Alert.Level.HIGH);
   private Alert backRightEncoderConnectedAlert =
-      new Alert("Back right encoder is not connected!", AlertType.kError);
-  private Alert pigeonConnectedAlert = new Alert("Pigeon is not connected", AlertType.kError);
+      new Alert("Back right encoder is not connected!", Alert.Level.HIGH);
+  private Alert pigeonConnectedAlert = new Alert("Pigeon is not connected", Alert.Level.HIGH);
 
   private TalonFX frontLeftDrive = this.getModule(0).getDriveMotor();
   private TalonFX frontLeftTurn = this.getModule(0).getSteerMotor();
@@ -100,11 +102,10 @@ public class SwerveSubsystem extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder
 
   private boolean disableAutoRotate = false;
   private RotationTarget rotationTarget = RotationTarget.NORMAL;
-  private CommandXboxController controller;
+  private CommandNiDsXboxController controller;
   private static final double kSimLoopPeriod = 0.005; // 5 ms
   private Notifier m_simNotifier = null;
   private double m_lastSimTime;
-  private final Telemetry logger = new Telemetry();
 
   private final SwerveRequest.SwerveDriveBrake driveBrake = new SwerveRequest.SwerveDriveBrake();
 
@@ -162,8 +163,8 @@ public class SwerveSubsystem extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder
   private boolean m_hasAppliedOperatorPerspective = false;
 
   /** Swerve request to apply during robot-centric path following */
-  private final SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds =
-      new SwerveRequest.ApplyRobotSpeeds().withDriveRequestType(DriveRequestType.Velocity);
+  private final SwerveRequest.ApplyRobotVelocity m_pathApplyRobotSpeeds =
+      new SwerveRequest.ApplyRobotVelocity().withDriveRequestType(DriveRequestType.Velocity);
 
   private double translationSlowFactor = 1;
   private double rotationalSlowFactor = 1;
@@ -186,9 +187,43 @@ public class SwerveSubsystem extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder
    * @param modules Constants for each specific module
    */
   public SwerveSubsystem(
-      CommandXboxController controller,
-      SwerveDrivetrainConstants drivetrainConstants,
-      SwerveModuleConstants<?, ?, ?>... modules) {
+      CommandNiDsXboxController controller) {
+
+    /* Switching swerve constants depending on drivetrain */
+    SwerveDrivetrainConstants drivetrainConstants = TunerConstants_mk5n.DrivetrainConstants;
+    SwerveModuleConstants<?, ?, ?> frontLeft = TunerConstants_mk5n.FrontLeft;
+    SwerveModuleConstants<?, ?, ?> frontRight = TunerConstants_mk5n.FrontRight;
+    SwerveModuleConstants<?, ?, ?> backLeft = TunerConstants_mk5n.BackLeft;
+    SwerveModuleConstants<?, ?, ?> backRight = TunerConstants_mk5n.BackRight;
+
+    switch(RobotContainer.getRobot()) {
+      case ANEMONE:
+        drivetrainConstants = TunerConstants_Anemone.DrivetrainConstants;
+        frontLeft = TunerConstants_Anemone.FrontLeft;
+        frontRight = TunerConstants_Anemone.FrontRight;
+        backLeft = TunerConstants_Anemone.BackLeft;
+        backRight = TunerConstants_Anemone.BackRight;
+        break;
+      case DEV:
+        drivetrainConstants = TunerConstants_mk4n.DrivetrainConstants;
+        frontLeft = TunerConstants_mk4n.FrontLeft;
+        frontRight = TunerConstants_mk4n.FrontRight;
+        backLeft = TunerConstants_mk4n.BackLeft;
+        backRight = TunerConstants_mk4n.BackRight;
+        break;
+      case KITBOT:
+        drivetrainConstants = TunerConstants_Mk4i.DrivetrainConstants;
+        frontLeft = TunerConstants_Mk4i.FrontLeft;
+        frontRight = TunerConstants_Mk4i.FrontRight;
+        backLeft = TunerConstants_Mk4i.BackLeft;
+        backRight = TunerConstants_Mk4i.BackRight;
+        break;
+       default:
+        break;
+    }
+
+    SwerveModuleConstants<?, ?, ?>[] modules = {frontLeft, frontRight, backLeft, backRight};
+
     super(TalonFX::new, TalonFX::new, CANcoder::new, drivetrainConstants, modules);
     this.controller = controller;
 
@@ -208,12 +243,12 @@ public class SwerveSubsystem extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder
       AutoBuilder.configure(
           () -> getCachedState().Pose, // Supplier of current robot pose
           this::resetPose, // Consumer for seeding pose against auto
-          () -> getCachedState().Speeds, // Supplier of current robot speeds
+          () -> getCachedState().Velocity, // Supplier of current robot speeds
           // Consumer of ChassisSpeeds and feedforwards to drive the robot
           (speeds, feedforwards) ->
               setControl(
                   m_pathApplyRobotSpeeds
-                      .withSpeeds(ChassisSpeeds.discretize(speeds, 0.020))
+                      .withVelocity(speeds.discretize(0.020))
                       .withWheelForceFeedforwardsX(feedforwards.robotRelativeForcesXNewtons())
                       .withWheelForceFeedforwardsY(feedforwards.robotRelativeForcesYNewtons())),
           new PPHolonomicDriveController(
@@ -223,11 +258,11 @@ public class SwerveSubsystem extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder
               new PIDConstants(7, 0, 0)),
           config,
           // Assume the path needs to be flipped for Red vs Blue, this is normally the case
-          () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
+          () -> MatchState.getAlliance().orElse(Alliance.BLUE) == Alliance.RED,
           this // Subsystem for requirements
           );
     } catch (Exception ex) {
-      DriverStation.reportError(
+      DriverStationErrors.reportError(
           "Failed to load PathPlanner config and configure AutoBuilder", ex.getStackTrace());
     }
   }
@@ -236,8 +271,8 @@ public class SwerveSubsystem extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder
     return () -> getCachedState().Pose;
   }
 
-  public Supplier<ChassisSpeeds> speedSupplier() {
-    return () -> getCachedState().Speeds;
+  public Supplier<ChassisVelocities> speedSupplier() {
+    return () -> getCachedState().Velocity;
   }
 
   private void startSimThread() {
@@ -269,8 +304,6 @@ public class SwerveSubsystem extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder
     cachedState = getStateCopy();
     cachedVirtualTarget = getVirtualTarget();
 
-    logger.telemeterize(cachedState);
-
     /*
      * Periodically try to apply the operator perspective.
      * If we haven't applied the operator perspective before, then we should apply it regardless of DS state.
@@ -278,12 +311,12 @@ public class SwerveSubsystem extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder
      * Otherwise, only check and apply the operator perspective if the DS is disabled.
      * This ensures driving behavior doesn't change until an explicit disable event occurs during testing.
      */
-    if (!m_hasAppliedOperatorPerspective || DriverStation.isDisabled()) {
-      DriverStation.getAlliance()
+    if (!m_hasAppliedOperatorPerspective || RobotState.isDisabled()) {
+      MatchState.getAlliance()
           .ifPresent(
               allianceColor -> {
                 setOperatorPerspectiveForward(
-                    allianceColor == Alliance.Red
+                    allianceColor == Alliance.RED
                         ? kRedAlliancePerspectiveRotation
                         : kBlueAlliancePerspectiveRotation);
                 m_hasAppliedOperatorPerspective = true;
@@ -329,8 +362,8 @@ public class SwerveSubsystem extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder
 
     SwerveDriveState swerveState = getState();
     DogLog.log("Swerve/Pose", swerveState.Pose);
-    DogLog.log("Swerve/Speeds", swerveState.Speeds);
-    DogLog.log("Swerve/ModuleStates", swerveState.ModuleStates);
+    DogLog.log("Swerve/Speeds", swerveState.Velocity);
+    DogLog.log("Swerve/ModulePositions", swerveState.ModulePositions);
     DogLog.log("Swerve/ModuleTargets", swerveState.ModuleTargets);
     DogLog.log("Swerve/Timestamp", swerveState.Timestamp);
     DogLog.log("Swerve/Odo,etryFrequency", 1.0 / swerveState.OdometryPeriod);
@@ -360,8 +393,8 @@ public class SwerveSubsystem extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder
     return Commands.runOnce(
             () -> {
               this.slowMode = true;
-              this.translationSlowFactor = MathUtil.clamp(translationSlowFactor, 0, 1);
-              this.rotationalSlowFactor = MathUtil.clamp(rotationalSlowFactor, 0, 1);
+              this.translationSlowFactor = Math.clamp(translationSlowFactor, 0, 1);
+              this.rotationalSlowFactor = Math.clamp(rotationalSlowFactor, 0, 1);
             })
         .withName("Slow Mode: " + translationSlowFactor + ", " + rotationalSlowFactor);
   }
@@ -489,17 +522,17 @@ public class SwerveSubsystem extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder
   }
 
   public boolean isDrivingToFuel() {
-    ChassisSpeeds currRobotSpeed = getCachedState().Speeds;
-    return currRobotSpeed.vxMetersPerSecond > 0.1;
+    ChassisVelocities currRobotSpeed = getCachedState().Velocity;
+    return currRobotSpeed.vx > 0.1;
   }
 
   public double getVelocityHeading() {
-    ChassisSpeeds fieldRelative =
-        ChassisSpeeds.fromRobotRelativeSpeeds(
-            getCachedState().Speeds, getCachedState().Pose.getRotation());
+    ChassisVelocities fieldRelative =
+        getCachedState().Velocity.toFieldRelative(
+            getCachedState().Pose.getRotation());
 
-    double vx = fieldRelative.vxMetersPerSecond;
-    double vy = fieldRelative.vyMetersPerSecond;
+    double vx = fieldRelative.vx;
+    double vy = fieldRelative.vy;
 
     double speedMagnitude = Math.hypot(vx, vy);
 
@@ -512,13 +545,13 @@ public class SwerveSubsystem extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder
 
   public Pose2d getPose(double timeSeconds) {
     Pose2d currPose = getCachedState().Pose;
-    ChassisSpeeds speeds = getCachedState().Speeds;
-    double velocityX = speeds.vxMetersPerSecond;
-    double velocityY = speeds.vyMetersPerSecond;
+    ChassisVelocities speeds = getCachedState().Velocity;
+    double velocityX = speeds.vx;
+    double velocityY = speeds.vy;
 
     double transformX = timeSeconds * velocityX;
     double transformY = timeSeconds * velocityY;
-    Rotation2d transformRotation = new Rotation2d(timeSeconds * speeds.omegaRadiansPerSecond);
+    Rotation2d transformRotation = new Rotation2d(timeSeconds * speeds.omega);
     Transform2d transformPose = new Transform2d(transformX, transformY, transformRotation);
     Pose2d predictedPose = currPose.plus(transformPose);
 

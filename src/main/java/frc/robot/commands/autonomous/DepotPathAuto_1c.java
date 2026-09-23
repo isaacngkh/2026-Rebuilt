@@ -2,11 +2,11 @@ package frc.robot.commands.autonomous;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.path.PathPlannerPath;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.driverstation.DriverStationErrors;
+import org.wpilib.framework.RobotBase;
+import org.wpilib.command2.Commands;
+import org.wpilib.command2.SequentialCommandGroup;
 import frc.robot.EagleUtil;
 import frc.robot.subsystems.groundIntakeLinearExtension.GroundIntakeLinearExtensionSubsystem;
 import frc.robot.subsystems.groundIntakeRoller.GroundIntakeRollerSubsystem;
@@ -45,8 +45,6 @@ public class DepotPathAuto_1c extends SequentialCommandGroup {
                   .deadlineFor(
                       Commands.sequence(
                           Commands.parallel(
-                              groundIntakeExtend.homingCommand().onlyIf(() -> RobotBase.isReal())),
-                          Commands.parallel(
                               groundIntakeExtend.extend2(),
                               groundIntakeRoller.startIntake(),
                               shooter.stopShooter()),
@@ -67,7 +65,7 @@ public class DepotPathAuto_1c extends SequentialCommandGroup {
                   groundIntakeRoller.startIntake()));
 
     } catch (Exception e) {
-      DriverStation.reportError("Path Not Found: " + e.getMessage(), e.getStackTrace());
+      DriverStationErrors.reportError("Path Not Found: " + e.getMessage(), e.getStackTrace());
     }
   }
 }

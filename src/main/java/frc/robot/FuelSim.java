@@ -1,12 +1,13 @@
 package frc.robot;
 
 import dev.doglog.DogLog;
-import edu.wpi.first.hal.HALUtil;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.math.geometry.Rotation2d;
+import org.wpilib.math.geometry.Translation2d;
+import org.wpilib.math.geometry.Translation3d;
+import org.wpilib.math.kinematics.ChassisVelocities;
+import org.wpilib.system.RobotController;
+
 import java.util.ArrayList;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -248,7 +249,7 @@ public class FuelSim {
   private ArrayList<Fuel> fuels = new ArrayList<Fuel>();
   private boolean running = false;
   private Supplier<Pose2d> robotSupplier = null;
-  private Supplier<ChassisSpeeds> robotSpeedsSupplier = null;
+  private Supplier<ChassisVelocities> robotSpeedsSupplier = null;
   private double robotWidth; // size along the robot's y axis
   private double robotLength; // size along the robot's x axis
   private double bumperHeight;
@@ -352,7 +353,7 @@ public class FuelSim {
       double length,
       double bumperHeight,
       Supplier<Pose2d> poseSupplier,
-      Supplier<ChassisSpeeds> fieldSpeedsSupplier) {
+      Supplier<ChassisVelocities> fieldSpeedsSupplier) {
     this.robotSupplier = poseSupplier;
     this.robotSpeedsSupplier = fieldSpeedsSupplier;
     this.robotWidth = width;
@@ -392,14 +393,14 @@ public class FuelSim {
    * @param vel Initial velocity vector
    * @return
    */
-  double t1 = HALUtil.getFPGATime();
+  long t1 = RobotController.getTime();
 
   public void spawnFuel(Translation3d pos, Translation3d vel) {
-    double t2 = HALUtil.getFPGATime();
+    long t2 = RobotController.getTime();
     if (((t2 - t1) / 1000 > 100) && (fuelInHopper > 0)) { // units in ms
       fuels.add(new Fuel(pos, vel));
       fuelInHopper--;
-      t1 = HALUtil.getFPGATime();
+      t1 = RobotController.getTime();
     }
   }
 
@@ -448,8 +449,8 @@ public class FuelSim {
 
   private void handleRobotCollisions(ArrayList<Fuel> fuels) {
     Pose2d robot = robotSupplier.get();
-    ChassisSpeeds speeds = robotSpeedsSupplier.get();
-    Translation2d robotVel = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+    ChassisVelocities speeds = robotSpeedsSupplier.get();
+    Translation2d robotVel = new Translation2d(speeds.vx, speeds.vy);
 
     for (Fuel fuel : fuels) {
       handleRobotCollision(fuel, robot, robotVel);

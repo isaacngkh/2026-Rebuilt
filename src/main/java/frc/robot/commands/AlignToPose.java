@@ -1,21 +1,22 @@
 package frc.robot.commands;
 
-import static edu.wpi.first.units.Units.MetersPerSecond;
+import static org.wpilib.units.Units.MetersPerSecond;
 
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import dev.doglog.DogLog;
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import org.wpilib.math.controller.PIDController;
+import org.wpilib.math.controller.ProfiledPIDController;
+import org.wpilib.math.filter.SlewRateLimiter;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.math.kinematics.ChassisVelocities;
+import org.wpilib.math.trajectory.TrapezoidProfile;
+import org.wpilib.math.trajectory.TrapezoidProfile.Constraints;
+import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.MatchState;
+import org.wpilib.command2.Command;
+import org.wpilib.command2.button.CommandNiDsXboxController;
+
 import frc.robot.subsystems.swerve.*;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
@@ -31,7 +32,7 @@ public class AlignToPose extends Command {
   private final DoubleSupplier elevatorHeight;
 
   private boolean resetLimiter = true;
-  private CommandXboxController driverController;
+  private CommandNiDsXboxController driverController;
 
   private SwerveSubsystem drivetrain;
   public Constraints constraints = new TrapezoidProfile.Constraints(3, 2);
@@ -58,7 +59,7 @@ public class AlignToPose extends Command {
       Supplier<Pose2d> poseSupplier,
       SwerveSubsystem drivetrain,
       DoubleSupplier elevatorHeight,
-      CommandXboxController driverController) {
+      CommandNiDsXboxController driverController) {
 
     this.drivetrain = drivetrain;
     this.targetPose = poseSupplier;
@@ -105,9 +106,8 @@ public class AlignToPose extends Command {
   public void initialize() {
     startTime = System.currentTimeMillis();
     Pose2d tp = targetPose.get();
-    ChassisSpeeds currentSpeed =
-        ChassisSpeeds.fromRobotRelativeSpeeds(
-            drivetrain.getCachedState().Speeds, drivetrain.getCachedState().Pose.getRotation());
+    ChassisVelocities currentSpeed =
+        drivetrain.getCachedState().Velocity.toFieldRelative(drivetrain.getCachedState().Pose.getRotation());
 
     double predicted_X =
         (tp.getX() - drivetrain.getCachedState().Pose.getX()) * 0.3
@@ -116,8 +116,8 @@ public class AlignToPose extends Command {
         (tp.getY() - drivetrain.getCachedState().Pose.getY()) * 0.3
             + drivetrain.getCachedState().Pose.getY();
 
-    PID_X.reset(predicted_X, currentSpeed.vxMetersPerSecond * 0.4);
-    PID_Y.reset(predicted_Y, currentSpeed.vyMetersPerSecond * 0.4);
+    PID_X.reset(predicted_X, currentSpeed.vx * 0.4);
+    PID_Y.reset(predicted_Y, currentSpeed.vy * 0.4);
     PID_X.setGoal(tp.getX());
     PID_Y.setGoal(tp.getY());
     PID_Rotation.setSetpoint(tp.getRotation().getDegrees());
@@ -132,16 +132,16 @@ public class AlignToPose extends Command {
     double currY = currPose.getY();
     Double currRotation = currPose.getRotation().getDegrees();
 
-    double PIDXOutput = MathUtil.clamp(PID_X.calculate(currX), -PID_MAX, PID_MAX);
+    double PIDXOutput = Math.clamp(PID_X.calculate(currX), -PID_MAX, PID_MAX);
     double xVelocity = -PIDXOutput;
     DogLog.log("Align/PIDXOutput", PIDXOutput);
 
-    double PIDYOutput = MathUtil.clamp(PID_Y.calculate(currY), -PID_MAX, PID_MAX);
+    double PIDYOutput = Math.clamp(PID_Y.calculate(currY), -PID_MAX, PID_MAX);
     double yVelocity = -PIDYOutput;
     DogLog.log("Align/PIDYoutput", PIDYOutput);
 
     double PIDRotationOutput =
-        MathUtil.clamp(PID_Rotation.calculate(currRotation), -PID_ROTATION_MAX, PID_ROTATION_MAX);
+        Math.clamp(PID_Rotation.calculate(currRotation), -PID_ROTATION_MAX, PID_ROTATION_MAX);
     double angularVelocity = PIDRotationOutput;
     DogLog.log("Align/PIDRotationoutput", PIDRotationOutput);
 
@@ -152,9 +152,9 @@ public class AlignToPose extends Command {
         yVelocityLimiter.reset(yVelocity);
         angularVelocityLimiter.reset(angularVelocity);
       }
-      xVelocity = MathUtil.clamp(xVelocity, -0.2, 0.2);
-      yVelocity = MathUtil.clamp(yVelocity, -0.2, 0.2);
-      angularVelocity = MathUtil.clamp(angularVelocity, -0.4, 0.4);
+      xVelocity = Math.clamp(xVelocity, -0.2, 0.2);
+      yVelocity = Math.clamp(yVelocity, -0.2, 0.2);
+      angularVelocity = Math.clamp(angularVelocity, -0.4, 0.4);
 
       xVelocity = xVelocityLimiter.calculate(xVelocity);
       yVelocity = yVelocityLimiter.calculate(yVelocity);
@@ -163,7 +163,7 @@ public class AlignToPose extends Command {
       resetLimiter = true;
     }
 
-    if (DriverStation.getAlliance().get() == DriverStation.Alliance.Blue) {
+    if (MatchState.getAlliance().get() == Alliance.BLUE) {
       xVelocity = -xVelocity * maxSpeed;
       yVelocity = -yVelocity * maxSpeed;
       angularVelocity = angularVelocity * maxAngularRate;
@@ -173,7 +173,7 @@ public class AlignToPose extends Command {
       angularVelocity = angularVelocity * maxAngularRate;
     }
 
-    angularVelocity = MathUtil.clamp(angularVelocity, -maxAngularRate, maxAngularRate);
+    angularVelocity = Math.clamp(angularVelocity, -maxAngularRate, maxAngularRate);
     DogLog.log("Align/xVelocity", xVelocity);
     DogLog.log("Align/yVelocity", yVelocity);
     DogLog.log("Align/angularVelocity", angularVelocity);

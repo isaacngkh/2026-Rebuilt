@@ -2,29 +2,22 @@ package frc.robot;
 
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.CANBus.CANBusStatus;
-import com.ctre.phoenix6.StatusSignalCollection;
 import com.pathplanner.lib.commands.FollowPathCommand;
 import dev.doglog.DogLog;
-import edu.wpi.first.hal.HALUtil;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.units.Units;
-import edu.wpi.first.units.measure.Time;
-import edu.wpi.first.wpilibj.Alert;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.HubTracker.Shift;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.driverstation.Alert;
+import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.MatchState;
+import org.wpilib.framework.RobotBase;
+import org.wpilib.system.RobotController;
+import org.wpilib.smartdashboard.SendableChooser;
+import org.wpilib.smartdashboard.SmartDashboard;
+import org.wpilib.command2.Command;
+import org.wpilib.command2.CommandScheduler;
+import org.wpilib.command2.Commands;
+import org.wpilib.command2.button.CommandNiDsXboxController;
+import org.wpilib.command2.button.RobotModeTriggers;
+import org.wpilib.command2.button.Trigger;
 import frc.robot.commands.DriveCommand;
 import frc.robot.commands.autonomous.DelayAuto;
 import frc.robot.commands.autonomous.DepotPathAuto_1c;
@@ -34,7 +27,6 @@ import frc.robot.commands.autonomous.Preload;
 import frc.robot.subsystems.aprilTagCam.AprilTagCam;
 import frc.robot.subsystems.aprilTagCam.AprilTagCamConstants;
 import frc.robot.subsystems.blocker.BlockerSubsystem;
-import frc.robot.subsystems.climber.ClimberConstants;
 import frc.robot.subsystems.climber.ClimberSubsystem;
 import frc.robot.subsystems.groundIntakeLinearExtension.GroundIntakeLinearExtensionSubsystem;
 import frc.robot.subsystems.groundIntakeRoller.GroundIntakeRollerSubsystem;
@@ -43,10 +35,6 @@ import frc.robot.subsystems.objectDetection.GamePieceTracker;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
 import frc.robot.subsystems.swerve.SwerveSubsystem;
 import frc.robot.subsystems.swerve.SwerveSubsystem.RotationTarget;
-import frc.robot.subsystems.swerve.TunerConstants_Anemone;
-import frc.robot.subsystems.swerve.TunerConstants_Mk4i;
-import frc.robot.subsystems.swerve.TunerConstants_mk4n;
-import frc.robot.subsystems.swerve.TunerConstants_mk5n;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
@@ -58,11 +46,6 @@ public class RobotContainer {
     KITBOT,
     SIM
   }
-
-  private final SwerveSubsystem drivetrain;
-  public static final CommandXboxController controller = new CommandXboxController(0);
-
-  private final DriveCommand defualtDriveCommand;
 
   @SuppressWarnings("resource")
   public static Robot getRobot() {
@@ -80,7 +63,7 @@ public class RobotContainer {
     } else {
       new Alert(
               "roborio unrecognized. here is the serial number:" + serialNumber,
-              Alert.AlertType.kError)
+              Alert.Level.HIGH)
           .set(true);
       ;
       return Robot.COMP;
@@ -89,81 +72,57 @@ public class RobotContainer {
 
   // private ObjectDetectionCam objDecCam;
 
-  @SuppressWarnings("unused")
   private final BiConsumer<Runnable, Double> addPeriodic;
 
-  private final CANBus rioCanbus = new CANBus("rio");
+  private final CANBus canBus0 = CANBus.systemcore(0);
+  private final CANBus canBus1 = CANBus.systemcore(1);
+  private final CANBus canBus2 = CANBus.systemcore(2);
+  private final CANBus canBus3 = CANBus.systemcore(3);
+  private final CANBus canBus4 = CANBus.systemcore(4);
   private final CANBus canivoreCanbus = new CANBus("CAN_Network");
 
-  private final StatusSignalCollection signalList = new StatusSignalCollection();
+  private final CommandNiDsXboxController controller = new CommandNiDsXboxController(0);
+  
+  private final SwerveSubsystem drivetrain = new SwerveSubsystem(controller);
+  private final ShooterSubsystem shooter = new ShooterSubsystem(canBus2, drivetrain.poseSupplier(), drivetrain::getVirtualTarget);
+  private final GroundIntakeRollerSubsystem groundIntakeRoller = new GroundIntakeRollerSubsystem(canBus4);
+  private final GroundIntakeLinearExtensionSubsystem groundIntakeExtension = new GroundIntakeLinearExtensionSubsystem(canBus3);
+  private final ClimberSubsystem climber = new ClimberSubsystem(canBus0);
+  private final IndexerSubsystem indexer = new IndexerSubsystem(canBus1);
+  private final BlockerSubsystem blocker = new BlockerSubsystem(canBus0);
 
-  private final ShooterSubsystem shooter;
-  private final GroundIntakeRollerSubsystem groundIntakeRoller;
-  private final GroundIntakeLinearExtensionSubsystem groundIntakeExtension;
-  private final ClimberSubsystem climber;
-  private final IndexerSubsystem indexer;
-  private final BlockerSubsystem blocker;
+  private final DriveCommand defualtDriveCommand = new DriveCommand(drivetrain, controller);
 
-  private final RobotVisualizer robotVisualizer;
+  private final RobotVisualizer robotVisualizer = new RobotVisualizer(groundIntakeExtension);
 
   private final SendableChooser<Command> autoChooser = new SendableChooser<Command>();
 
-  public final Trigger isHubActive =
-      new Trigger(
-          () -> {
-            Shift currentShift = HubTracker.getCurrentShift().orElse(Shift.SHIFT_1);
-            double timeRemaining =
-                HubTracker.timeRemainingInCurrentShift()
-                    .orElse(Time.ofBaseUnits(0, Units.Second))
-                    .in(Units.Seconds);
-            DogLog.log("Hub Status/Time Remaining in Shift", timeRemaining);
-            DogLog.log("Hub Status/Current Shift", currentShift.name());
+  public final Trigger isHubActive = new Trigger(() -> HubTracker.isHubActiveCustom());
 
-            double upperThreshold = 3;
-            double lowerThreshold = 24;
-
-            if (HubTracker.getAutoWinner().orElse(Alliance.Red) == Alliance.Red) {
-              // Red Win
-              if (EagleUtil.isRedAlliance()) {
-                // as Red Team (win)
-                if (currentShift == Shift.SHIFT_1 || currentShift == Shift.SHIFT_3) {
-                  return timeRemaining >= lowerThreshold
-                      || timeRemaining <= upperThreshold
-                      || HubTracker.isActive();
-                }
-              } else {
-                // as Blue Team (loss)
-                if (currentShift == Shift.SHIFT_2 || currentShift == Shift.SHIFT_4) {
-                  return timeRemaining >= lowerThreshold
-                      || timeRemaining <= upperThreshold
-                      || HubTracker.isActive();
-                }
-              }
-            } else {
-              // Blue Win
-              if (!EagleUtil.isRedAlliance()) {
-                // as Blue Team (win)
-                if (currentShift == Shift.SHIFT_1 || currentShift == Shift.SHIFT_3) {
-                  return timeRemaining >= lowerThreshold
-                      || timeRemaining <= upperThreshold
-                      || HubTracker.isActive();
-                }
-              } else {
-                // as Red Team (loss)
-                if (currentShift == Shift.SHIFT_2 || currentShift == Shift.SHIFT_4) {
-                  return timeRemaining >= lowerThreshold
-                      || timeRemaining <= upperThreshold
-                      || HubTracker.isActive();
-                }
-              }
-            }
-            return HubTracker.isActive();
-          });
-
-  private AprilTagCam backRightCam;
-  private AprilTagCam backLeftCam;
-  private AprilTagCam frontRightCam;
-  private AprilTagCam frontLeftCam;
+  private AprilTagCam[] cameras = {new AprilTagCam(
+                AprilTagCamConstants.BACK_RIGHT_CAM,
+                AprilTagCamConstants.BACK_RIGHT_CAM_LOCATION,
+                drivetrain::addVisionMeasurement,
+                () -> drivetrain.getCachedState().Pose,
+                () -> drivetrain.getCachedState().Velocity),
+              new AprilTagCam(
+                AprilTagCamConstants.BACK_LEFT_CAM,
+                AprilTagCamConstants.BACK_LEFT_CAM_LOCATION,
+                drivetrain::addVisionMeasurement,
+                () -> drivetrain.getCachedState().Pose,
+                () -> drivetrain.getCachedState().Velocity),
+              new AprilTagCam(
+                AprilTagCamConstants.FRONT_LEFT_CAM,
+                AprilTagCamConstants.FRONT_LEFT_CAM_LOCATION,
+                drivetrain::addVisionMeasurement,
+                () -> drivetrain.getCachedState().Pose,
+                () -> drivetrain.getCachedState().Velocity),
+              new AprilTagCam(
+                AprilTagCamConstants.FRONT_RIGHT_CAM,
+                AprilTagCamConstants.FRONT_RIGHT_CAM_LOCATION,
+                drivetrain::addVisionMeasurement,
+                () -> drivetrain.getCachedState().Pose,
+                () -> drivetrain.getCachedState().Velocity)};
 
   public RobotContainer(BiConsumer<Runnable, Double> addPeriodic) {
 
@@ -177,175 +136,6 @@ public class RobotContainer {
         },
         0.5);
 
-    switch (getRobot()) {
-      case COMP:
-        drivetrain = TunerConstants_mk5n.createDrivetrain();
-        shooter =
-            ShooterSubsystem.createReal(
-                rioCanbus,
-                canivoreCanbus,
-                signalList,
-                drivetrain.poseSupplier(),
-                drivetrain::getVirtualTarget);
-
-        climber = ClimberSubsystem.createDisabled();
-        indexer = IndexerSubsystem.createReal(rioCanbus, canivoreCanbus, signalList);
-        groundIntakeRoller =
-            GroundIntakeRollerSubsystem.createReal(rioCanbus, canivoreCanbus, signalList);
-        groundIntakeExtension =
-            GroundIntakeLinearExtensionSubsystem.createReal(rioCanbus, canivoreCanbus, signalList);
-        blocker = BlockerSubsystem.createDisabled();
-
-        backRightCam =
-            new AprilTagCam(
-                AprilTagCamConstants.BACK_RIGHT_CAM,
-                AprilTagCamConstants.BACK_RIGHT_CAM_LOCATION,
-                drivetrain::addVisionMeasurement,
-                () -> drivetrain.getCachedState().Pose,
-                () -> drivetrain.getCachedState().Speeds);
-        backLeftCam =
-            new AprilTagCam(
-                AprilTagCamConstants.BACK_LEFT_CAM,
-                AprilTagCamConstants.BACK_LEFT_CAM_LOCATION,
-                drivetrain::addVisionMeasurement,
-                () -> drivetrain.getCachedState().Pose,
-                () -> drivetrain.getCachedState().Speeds);
-        frontLeftCam =
-            new AprilTagCam(
-                AprilTagCamConstants.FRONT_LEFT_CAM,
-                AprilTagCamConstants.FRONT_LEFT_CAM_LOCATION,
-                drivetrain::addVisionMeasurement,
-                () -> drivetrain.getCachedState().Pose,
-                () -> drivetrain.getCachedState().Speeds);
-        frontRightCam =
-            new AprilTagCam(
-                AprilTagCamConstants.FRONT_RIGHT_CAM,
-                AprilTagCamConstants.FRONT_RIGHT_CAM_LOCATION,
-                drivetrain::addVisionMeasurement,
-                () -> drivetrain.getCachedState().Pose,
-                () -> drivetrain.getCachedState().Speeds);
-        break;
-      case ANEMONE:
-        drivetrain = TunerConstants_Anemone.createDrivetrain();
-        shooter =
-            ShooterSubsystem.createDisabled(
-                drivetrain.poseSupplier(), drivetrain::getVirtualTarget);
-        climber = ClimberSubsystem.createDisabled();
-        indexer = IndexerSubsystem.createDisabled();
-        groundIntakeRoller = GroundIntakeRollerSubsystem.createDisabled();
-        groundIntakeExtension = GroundIntakeLinearExtensionSubsystem.createDisabled();
-        blocker = BlockerSubsystem.createDisabled();
-        break;
-      case KITBOT:
-        drivetrain = TunerConstants_Mk4i.createDrivetrain();
-        shooter =
-            ShooterSubsystem.createKitbot(
-                rioCanbus,
-                canivoreCanbus,
-                signalList,
-                drivetrain.poseSupplier(),
-                drivetrain::getVirtualTarget);
-        climber = ClimberSubsystem.createDisabled();
-        indexer = IndexerSubsystem.createReal(canivoreCanbus, rioCanbus, signalList);
-        groundIntakeRoller = GroundIntakeRollerSubsystem.createDisabled();
-        groundIntakeExtension = GroundIntakeLinearExtensionSubsystem.createDisabled();
-        blocker = BlockerSubsystem.createReal(rioCanbus, canivoreCanbus, signalList);
-        break;
-      case DEV:
-        drivetrain = TunerConstants_mk4n.createDrivetrain();
-        shooter =
-            ShooterSubsystem.createDisabled(
-                drivetrain.poseSupplier(), drivetrain::getVirtualTarget);
-        climber = ClimberSubsystem.createDisabled();
-        indexer = IndexerSubsystem.createDisabled();
-        groundIntakeRoller = GroundIntakeRollerSubsystem.createDisabled();
-        groundIntakeExtension = GroundIntakeLinearExtensionSubsystem.createDisabled();
-        blocker = BlockerSubsystem.createDisabled();
-        break;
-      case SIM:
-        drivetrain = TunerConstants_mk5n.createDrivetrain();
-        shooter =
-            ShooterSubsystem.createSim(drivetrain.poseSupplier(), drivetrain::getVirtualTarget);
-        climber = ClimberSubsystem.createSim();
-        indexer = IndexerSubsystem.createSim();
-        groundIntakeRoller = GroundIntakeRollerSubsystem.createSim();
-        groundIntakeExtension = GroundIntakeLinearExtensionSubsystem.createSim();
-        blocker = BlockerSubsystem.createSim();
-
-        backRightCam =
-            new AprilTagCam(
-                AprilTagCamConstants.BACK_RIGHT_CAM,
-                AprilTagCamConstants.BACK_RIGHT_CAM_LOCATION,
-                drivetrain::addVisionMeasurement,
-                () -> drivetrain.getCachedState().Pose,
-                () -> drivetrain.getCachedState().Speeds);
-        backLeftCam =
-            new AprilTagCam(
-                AprilTagCamConstants.BACK_LEFT_CAM,
-                AprilTagCamConstants.BACK_LEFT_CAM_LOCATION,
-                drivetrain::addVisionMeasurement,
-                () -> drivetrain.getCachedState().Pose,
-                () -> drivetrain.getCachedState().Speeds);
-
-        frontRightCam =
-            new AprilTagCam(
-                AprilTagCamConstants.FRONT_RIGHT_CAM,
-                AprilTagCamConstants.FRONT_RIGHT_CAM_LOCATION,
-                drivetrain::addVisionMeasurement,
-                () -> drivetrain.getCachedState().Pose,
-                () -> drivetrain.getCachedState().Speeds);
-
-        frontLeftCam =
-            new AprilTagCam(
-                AprilTagCamConstants.FRONT_LEFT_CAM,
-                AprilTagCamConstants.FRONT_LEFT_CAM_LOCATION,
-                drivetrain::addVisionMeasurement,
-                () -> drivetrain.getCachedState().Pose,
-                () -> drivetrain.getCachedState().Speeds);
-        break;
-      default:
-        drivetrain = TunerConstants_mk5n.createDrivetrain();
-        shooter =
-            ShooterSubsystem.createReal(
-                rioCanbus,
-                canivoreCanbus,
-                signalList,
-                drivetrain.poseSupplier(),
-                drivetrain::getVirtualTarget);
-        climber = ClimberSubsystem.createDisabled();
-        indexer = IndexerSubsystem.createReal(rioCanbus, canivoreCanbus, signalList);
-        groundIntakeRoller =
-            GroundIntakeRollerSubsystem.createReal(rioCanbus, canivoreCanbus, signalList);
-        groundIntakeExtension =
-            GroundIntakeLinearExtensionSubsystem.createReal(rioCanbus, canivoreCanbus, signalList);
-        blocker = BlockerSubsystem.createDisabled();
-
-        backRightCam =
-            new AprilTagCam(
-                AprilTagCamConstants.BACK_RIGHT_CAM,
-                AprilTagCamConstants.BACK_RIGHT_CAM_LOCATION,
-                drivetrain::addVisionMeasurement,
-                () -> drivetrain.getCachedState().Pose,
-                () -> drivetrain.getCachedState().Speeds);
-        backLeftCam =
-            new AprilTagCam(
-                AprilTagCamConstants.BACK_LEFT_CAM,
-                AprilTagCamConstants.BACK_LEFT_CAM_LOCATION,
-                drivetrain::addVisionMeasurement,
-                () -> drivetrain.getCachedState().Pose,
-                () -> drivetrain.getCachedState().Speeds);
-        frontLeftCam =
-            new AprilTagCam(
-                AprilTagCamConstants.FRONT_LEFT_CAM,
-                AprilTagCamConstants.FRONT_LEFT_CAM_LOCATION,
-                drivetrain::addVisionMeasurement,
-                () -> drivetrain.getCachedState().Pose,
-                () -> drivetrain.getCachedState().Speeds);
-        break;
-    }
-
-    defualtDriveCommand = new DriveCommand(drivetrain, controller);
-
     // objDecCam =
     //     new ObjectDetectionCam(
     //         "cam2026_01", ObjectDetectionConstants.robotToCam, () ->
@@ -355,8 +145,6 @@ public class RobotContainer {
     configureAutonomous();
 
     drivetrain.setDefaultCommand(defualtDriveCommand);
-
-    robotVisualizer = new RobotVisualizer(groundIntakeExtension);
 
     CommandScheduler.getInstance()
         .schedule(
@@ -390,15 +178,14 @@ public class RobotContainer {
    * Use this method to define your trigger->command mappings. Triggers can be created via the
    * {@link Trigger#Trigger(java.util.function.BooleanSupplier)} constructor with an arbitrary
    * predicate, or via the named factories in {@link
-   * edu.wpi.first.wpilibj2.command.button.CommandGenericHID}'s subclasses for {@link
-   * CommandXboxController Xbox}/{@link edu.wpi.first.wpilibj2.command.button.CommandPS4Controller
-   * PS4} controllers or {@link edu.wpi.first.wpilibj2.command.button.CommandJoystick Flight
+   * org.wpilib.command2.button.CommandGenericHID}'s subclasses for {@link
+   * CommandXboxController Xbox}/{@link org.wpilib.command2.button.CommandPS4Controller
+   * PS4} controllers or {@link org.wpilib.command2.button.CommandJoystick Flight
    * joysticks}.
    */
   private void configureBindings() {
     RobotModeTriggers.disabled().onTrue(disableHandler());
     controller.leftBumper().onTrue(drivetrain.setRotationCommand(RotationTarget.NORMAL));
-    // drivetrain.isOnBump.whileTrue(drivetrain.temporarilyDisableRotation());
 
     controller.rightTrigger().and(drivetrain.isInAllianceZone).whileTrue(shootHub());
 
@@ -465,8 +252,6 @@ public class RobotContainer {
         .and(controller.rightTrigger().negate())
         .onTrue(shooter.stopShooter());
 
-    // controller.start().onTrue(autoClimb());
-
     controller.povRight().whileTrue(bumpJump());
     controller.povRight().onFalse(stopBumpJump());
 
@@ -487,8 +272,6 @@ public class RobotContainer {
   private void configureAutonomous() {
     NeutralAutos.configNeutralAutos(
         drivetrain, shooter, indexer, groundIntakeExtension, groundIntakeRoller, climber);
-    // autoChooser.addOption("Bump 1 Cycle Depot", new NeutralAutos(false, Routine.BUMP, false));
-    // autoChooser.addOption("Bump 1 Cycle Outpost", new NeutralAutos(true, Routine.BUMP, false));
     autoChooser.addOption(
         "Bump 2 Cycle Depot", new NeutralAutos(false, Routine.BUMP, true, false, 0.0));
     autoChooser.addOption(
@@ -521,8 +304,7 @@ public class RobotContainer {
         0.127, // from floor to top of bumpers
         () -> drivetrain.getCachedState().Pose, // Supplier<Pose2d> of robot pose
         () ->
-            ChassisSpeeds.fromRobotRelativeSpeeds(
-                drivetrain.getCachedState().Speeds,
+            drivetrain.getCachedState().Velocity.toFieldRelative(
                 drivetrain.getCachedState().Pose.getRotation()));
     // Supplier<ChassisSpeeds> of field-centric chassis speeds
 
@@ -545,83 +327,45 @@ public class RobotContainer {
     if (HubTracker.getAutoWinner().isPresent()) {
       Alliance actualAutoWinner = HubTracker.getAutoWinner().get();
       if (EagleUtil.isRedAlliance()) {
-        autoWin = actualAutoWinner == Alliance.Red;
+        autoWin = actualAutoWinner == Alliance.RED;
       } else {
-        autoWin = actualAutoWinner == Alliance.Blue;
+        autoWin = actualAutoWinner == Alliance.BLUE;
       }
     }
 
     DogLog.log("Auto Winner", autoWin);
 
-    double startTime = HALUtil.getFPGATime();
-
-    startTime = HALUtil.getFPGATime();
-
-    if (backRightCam != null) {
-      backRightCam.updatePoseEstim();
-      DogLog.log(
-          "Loop Time/Robot Container/Back Right Cam", (HALUtil.getFPGATime() - startTime) / 1000);
+    for(AprilTagCam cam : cameras) {
+      cam.updatePoseEstim();
     }
 
-    startTime = HALUtil.getFPGATime();
-
-    if (backLeftCam != null) {
-      backLeftCam.updatePoseEstim();
-      DogLog.log(
-          "Loop Time/Robot Container/Back Left Cam", (HALUtil.getFPGATime() - startTime) / 1000);
-    }
-
-    startTime = HALUtil.getFPGATime();
-
-    if (frontRightCam != null) {
-      frontRightCam.updatePoseEstim();
-      DogLog.log(
-          "Loop Time/Robot Container/Front Right Cam", (HALUtil.getFPGATime() - startTime) / 1000);
-    }
-
-    startTime = HALUtil.getFPGATime();
-
-    if (frontLeftCam != null) {
-      frontLeftCam.updatePoseEstim();
-      DogLog.log(
-          "Loop Time/Robot Container/Front Left Cam", (HALUtil.getFPGATime() - startTime) / 1000);
-    }
 
     // if (objDecCam != null) {
     //   objDecCam.updateDetection();
     // }
 
-    DogLog.log(
-        "Loop Time/Robot Container/objectDetection Cam",
-        (HALUtil.getFPGATime() - startTime) / 1000);
+    // DogLog.log(
+    //     "Loop Time/Robot Container/objectDetection Cam",
+    //     (RobotController.getTime() - startTime) / 1000);
 
-    startTime = HALUtil.getFPGATime();
+    long startTime = RobotController.getTime();
 
-    if (RobotBase.isReal()) {
-      signalList.refreshAll();
-    }
-
-    DogLog.log(
-        "Loop Time/Robot Container/Refresh Signal List",
-        (HALUtil.getFPGATime() - startTime) / 1000);
-
-    startTime = HALUtil.getFPGATime();
     robotVisualizer.periodic();
     DogLog.log(
-        "Loop Time/Robot Container/Robot Visualizer", (HALUtil.getFPGATime() - startTime) / 1000);
+        "Loop Time/Robot Container/Robot Visualizer", (RobotController.getTime() - startTime) / 1000);
 
-    startTime = HALUtil.getFPGATime();
+    startTime = RobotController.getTime();
 
-    DogLog.log("Match Timer", DriverStation.getMatchTime());
+    DogLog.log("Match Timer", MatchState.getMatchTime());
 
-    DogLog.log("Loop Time/Robot Container/Match Timer", (HALUtil.getFPGATime() - startTime) / 1000);
+    DogLog.log("Loop Time/Robot Container/Match Timer", (RobotController.getTime() - startTime) / 1000);
 
-    startTime = HALUtil.getFPGATime();
+    startTime = RobotController.getTime();
 
     Optional<Pose2d> obj = GamePieceTracker.getGamePiece();
 
     DogLog.log(
-        "Loop Time/Robot Container/Game Piece Tracker", (HALUtil.getFPGATime() - startTime) / 1000);
+        "Loop Time/Robot Container/Game Piece Tracker", (RobotController.getTime() - startTime) / 1000);
 
     DogLog.log("Hub Status/Is Active", isHubActive.getAsBoolean());
 
@@ -744,42 +488,6 @@ public class RobotContainer {
             groundIntakeRoller.startIntake(),
             shooter.runVelocity(0, 0))
         .withName("Topoff");
-  }
-
-  public Command autoClimb() {
-    return Commands.sequence(
-            Commands.parallel(
-                drivetrain
-                    .driveToPose(() -> EagleUtil.getClimbPose(drivetrain.getCachedState().Pose))
-                    .until(
-                        () ->
-                            drivetrain
-                                    .getCachedState()
-                                    .Pose
-                                    .getTranslation()
-                                    .getDistance(
-                                        EagleUtil.getClimbPose(drivetrain.getCachedState().Pose)
-                                            .getTranslation())
-                                < 0.10),
-                groundIntakeRoller.stopIntake(),
-                shooter.stopShooter(),
-                Commands.sequence(
-                    groundIntakeExtension.retract(),
-                    Commands.waitSeconds(0.5),
-                    climber.runPosition(ClimberConstants.PREP_CLIMB))),
-            Commands.waitUntil(controller.start().debounce(0.1)),
-            climber.runPosition(ClimberConstants.CLIMB_L1),
-            Commands.waitUntil(controller.start().debounce(0.1)),
-            climber.runPosition(ClimberConstants.PREP_CLIMB_MIDDLE),
-            Commands.waitUntil(controller.start().debounce(0.1)),
-            climber.runPosition(ClimberConstants.CLIMB_L2),
-            Commands.waitUntil(controller.start().debounce(0.1)),
-            climber.runPosition(ClimberConstants.PREP_CLIMB_MIDDLE),
-            Commands.waitUntil(controller.start().debounce(0.1)),
-            climber.runPosition(ClimberConstants.CLIMB_L3),
-            Commands.waitUntil(controller.start().debounce(0.1)),
-            Commands.parallel(indexer.index(), shooter.cruiseControl()))
-        .withInterruptBehavior(InterruptionBehavior.kCancelIncoming);
   }
 
   public Command backupShootHub() {

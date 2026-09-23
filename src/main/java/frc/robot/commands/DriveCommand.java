@@ -7,18 +7,20 @@ package frc.robot.commands;
 import com.ctre.phoenix6.swerve.SwerveDrivetrain.SwerveDriveState;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import dev.doglog.DogLog;
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import org.wpilib.math.util.MathUtil;
+import org.wpilib.math.controller.PIDController;
+import org.wpilib.math.controller.ProfiledPIDController;
+import org.wpilib.math.filter.SlewRateLimiter;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.math.geometry.Translation2d;
+import org.wpilib.math.kinematics.ChassisVelocities;
+import org.wpilib.math.trajectory.TrapezoidProfile;
+import org.wpilib.math.util.Units;
+import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.MatchState;
+import org.wpilib.command2.Command;
+import org.wpilib.command2.button.CommandNiDsXboxController;
+
 import frc.robot.EagleUtil;
 import frc.robot.FieldConstants;
 import frc.robot.subsystems.objectDetection.GamePieceTracker;
@@ -32,7 +34,7 @@ public class DriveCommand extends Command {
   /** Creates a new DriveCommand. */
   private final SwerveSubsystem drivetrain;
 
-  private final CommandXboxController controller;
+  private final CommandNiDsXboxController controller;
 
   private final SwerveRequest.FieldCentric fieldCentric = new SwerveRequest.FieldCentric();
 
@@ -40,8 +42,8 @@ public class DriveCommand extends Command {
   private final SlewRateLimiter xVelocityLimiter;
   private final SlewRateLimiter yVelocityLimiter;
 
-  private final double maxSpeed = 3.9;
-  private final double maxAngularSpeed = 2.2 * Math.PI;
+  private final double maxSpeed = 4.25;
+  private final double maxAngularSpeed = 3.5 * Math.PI;
 
   private final double deadband = 0.06;
 
@@ -53,7 +55,7 @@ public class DriveCommand extends Command {
   private boolean resetLimiter = true;
   private boolean resetAutoRotate = true;
 
-  public DriveCommand(SwerveSubsystem drivetrain, CommandXboxController controller) {
+  public DriveCommand(SwerveSubsystem drivetrain, CommandNiDsXboxController controller) {
     // Use addRequirements() here to declare subsystem dependencies.
     this.drivetrain = drivetrain;
     this.controller = controller;
@@ -98,7 +100,7 @@ public class DriveCommand extends Command {
         resetAutoRotate = false;
         robotHeadingController.reset(
             currentRobotHeading,
-            Units.radiansToDegrees(drivetrain.getCachedState().Speeds.omegaRadiansPerSecond));
+            Units.radiansToDegrees(drivetrain.getCachedState().Velocity.omega));
       }
 
       robotHeadingController.setGoal(drivetrain.getGoalHeading());
@@ -106,7 +108,7 @@ public class DriveCommand extends Command {
       double pidOutput = robotHeadingController.calculate(currentRobotHeading);
       double setpointVelocity =
           robotHeadingController.getSetpoint().velocity / Units.radiansToDegrees(maxAngularSpeed);
-      rotationalInput = MathUtil.clamp(pidOutput + setpointVelocity, -1, 1);
+      rotationalInput = Math.clamp(pidOutput + setpointVelocity, -1, 1);
 
       DogLog.log("Drive Command/pidOutput", pidOutput);
       DogLog.log("Drive Command/rotational input", rotationalInput);
@@ -159,22 +161,20 @@ public class DriveCommand extends Command {
 
       double kP = 0.5507; // Change
 
-      if (DriverStation.getAlliance().isPresent()
-          && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue) {
+      if (MatchState.getAlliance().isPresent()
+          && MatchState.getAlliance().get() == Alliance.BLUE) {
         kP *= -1;
       }
 
-      ChassisSpeeds assistedVectorRobotOriented = new ChassisSpeeds(0, errorY * kP, 0);
+      ChassisVelocities assistedVectorRobotOriented = new ChassisVelocities(0, errorY * kP, 0);
       DogLog.log("Intake Drive Assist/Assisted Robot Relative Vector", assistedVectorRobotOriented);
 
-      ChassisSpeeds assistedVectorFieldOriented =
-          ChassisSpeeds.fromRobotRelativeSpeeds(
-              assistedVectorRobotOriented, currentRobotPose.getRotation());
+      ChassisVelocities assistedVectorFieldOriented = assistedVectorRobotOriented.toFieldRelative(currentRobotPose.getRotation());
       DogLog.log("Intake Drive Assist/Assisted Field Relative Vector", assistedVectorFieldOriented);
 
-      xInput += -assistedVectorFieldOriented.vyMetersPerSecond;
-      yInput += -assistedVectorFieldOriented.vxMetersPerSecond;
-      rotationalInput += assistedVectorFieldOriented.omegaRadiansPerSecond;
+      xInput += -assistedVectorFieldOriented.vy;
+      yInput += -assistedVectorFieldOriented.vx;
+      rotationalInput += assistedVectorFieldOriented.omega;
     }
 
     if (drivetrain.isSlewRateLimitAcceleration()) {

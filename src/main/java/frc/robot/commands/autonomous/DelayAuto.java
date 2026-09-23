@@ -2,11 +2,11 @@ package frc.robot.commands.autonomous;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.path.PathPlannerPath;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.driverstation.DriverStationErrors;
+import org.wpilib.framework.RobotBase;
+import org.wpilib.command2.Commands;
+import org.wpilib.command2.SequentialCommandGroup;
 import frc.robot.subsystems.groundIntakeLinearExtension.GroundIntakeLinearExtensionSubsystem;
 import frc.robot.subsystems.groundIntakeRoller.GroundIntakeRollerSubsystem;
 import frc.robot.subsystems.indexer.IndexerSubsystem;
@@ -28,7 +28,7 @@ public class DelayAuto extends SequentialCommandGroup {
 
       addCommands(
           AutoBuilder.resetOdom(startingPose).onlyIf(() -> RobotBase.isSimulation()),
-          Commands.waitSeconds(5).deadlineFor(indexer.index(), shooter.cruiseControl()),
+          Commands.waitSeconds(5).deadlineFor(indexer.index(), shooter.runVelocity(45, 42)),
           Commands.waitSeconds(9)
               .deadlineFor(Commands.parallel(shooter.runVoltage(0), indexer.runVoltage(0))),
           Commands.parallel(
@@ -39,7 +39,7 @@ public class DelayAuto extends SequentialCommandGroup {
                       groundIntakeExtend.extend2(), groundIntakeRoller.startIntake()))));
 
     } catch (Exception e) {
-      DriverStation.reportError("Path Not Found: " + e.getMessage(), e.getStackTrace());
+      DriverStationErrors.reportError("Path Not Found: " + e.getMessage(), e.getStackTrace());
     }
   }
 }

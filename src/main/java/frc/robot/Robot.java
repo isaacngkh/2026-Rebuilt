@@ -2,13 +2,11 @@ package frc.robot;
 
 import dev.doglog.DogLog;
 import dev.doglog.DogLogOptions;
-import edu.wpi.first.hal.HALUtil;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.PowerDistribution;
-import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.livewindow.LiveWindow;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import org.wpilib.hardware.power.PowerDistribution;
+import org.wpilib.system.RobotController;
+import org.wpilib.framework.TimedRobot;
+import org.wpilib.command2.Command;
+import org.wpilib.command2.CommandScheduler;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.util.List;
@@ -18,20 +16,16 @@ public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
 
   private final RobotContainer m_robotContainer;
-  private double prevTime = HALUtil.getFPGATime();
+  private double prevTime = RobotController.getTime();
   private final GcStatsCollector gcStatsCollector = new GcStatsCollector();
 
   public Robot() {
     // Setup DogLog
     DogLog.setOptions(
-        new DogLogOptions().withNtPublish(true).withCaptureNt(true).withCaptureDs(true));
-    DogLog.setPdh(new PowerDistribution());
+        new DogLogOptions());
+    DogLog.setPdh(new PowerDistribution(0));
 
     m_robotContainer = new RobotContainer(this::addPeriodic);
-
-    LiveWindow.disableAllTelemetry();
-
-    DriverStation.silenceJoystickConnectionWarning(true);
 
     DogLog.log("/Metadata/Branch", BuildConstants.GIT_BRANCH);
     DogLog.log("/Metadata/SHA", BuildConstants.GIT_SHA);
@@ -39,16 +33,16 @@ public class Robot extends TimedRobot {
 
   @Override
   public void robotPeriodic() {
-    double startTime = HALUtil.getFPGATime();
+    long startTime = RobotController.getTime();
     CommandScheduler.getInstance().run();
-    DogLog.log("Loop Time/Command Scheduler", (HALUtil.getFPGATime() - startTime) / 1000);
-    double endTime = HALUtil.getFPGATime();
+    DogLog.log("Loop Time/Command Scheduler", (RobotController.getTime() - startTime) / 1000);
+    long endTime = RobotController.getTime();
     m_robotContainer.periodic();
-    DogLog.log("Loop Time/Robot Container", (HALUtil.getFPGATime() - endTime) / 1000);
+    DogLog.log("Loop Time/Robot Container", (RobotController.getTime() - endTime) / 1000);
 
     gcStatsCollector.update();
 
-    double currentTime = HALUtil.getFPGATime();
+    long currentTime = RobotController.getTime();
     DogLog.log("Loop Time/Total", (currentTime - prevTime) / 1000);
     prevTime = currentTime;
   }
@@ -79,14 +73,6 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {}
-
-  @Override
-  public void testInit() {
-    CommandScheduler.getInstance().cancelAll();
-  }
-
-  @Override
-  public void testPeriodic() {}
 
   @Override
   public void simulationInit() {}

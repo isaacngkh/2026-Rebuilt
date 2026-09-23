@@ -1,9 +1,9 @@
 package frc.robot;
 
 import dev.doglog.DogLog;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import org.wpilib.math.geometry.Pose3d;
+import org.wpilib.math.geometry.Rotation3d;
+import org.wpilib.command2.SubsystemBase;
 import frc.robot.subsystems.groundIntakeLinearExtension.GroundIntakeLinearExtensionConstants;
 import frc.robot.subsystems.groundIntakeLinearExtension.GroundIntakeLinearExtensionSubsystem;
 

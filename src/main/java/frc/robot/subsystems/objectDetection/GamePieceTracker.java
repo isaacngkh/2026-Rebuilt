@@ -1,8 +1,8 @@
 package frc.robot.subsystems.objectDetection;
 
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.Timer;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.math.geometry.Rotation2d;
+import org.wpilib.system.RobotController;
 import java.util.LinkedList;
 import java.util.Optional;
 
@@ -34,7 +34,7 @@ public class GamePieceTracker {
   }
 
   public static Optional<Pose2d> getGamePiece() {
-    double currentTime = Timer.getFPGATimestamp(); // gets the current time
+    long currentTime = RobotController.getTime(); // gets the current time
 
     // Remove targets that are older than the threshold
     if (targets.isEmpty()) {

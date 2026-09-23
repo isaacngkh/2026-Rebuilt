@@ -38,11 +38,11 @@ public class IndexerSubsystem extends SubsystemBase {
 
   public IndexerSubsystem(CANBus canBus) {
     switch(RobotContainer.getRobot()) {
-      case KITBOT:
       case ANEMONE:
       case DEV:
         motor1 = TalonFX.none();
         break;
+      case KITBOT:
       case SIM:
       case COMP:
       default:

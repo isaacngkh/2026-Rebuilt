@@ -99,7 +99,8 @@ public class RobotContainer {
 
   public final Trigger isHubActive = new Trigger(() -> HubTracker.isHubActiveCustom());
 
-  private AprilTagCam[] cameras = {new AprilTagCam(
+  private AprilTagCam[] cameras = {
+              new AprilTagCam(
                 AprilTagCamConstants.BACK_RIGHT_CAM,
                 AprilTagCamConstants.BACK_RIGHT_CAM_LOCATION,
                 drivetrain::addVisionMeasurement,
@@ -122,7 +123,8 @@ public class RobotContainer {
                 AprilTagCamConstants.FRONT_RIGHT_CAM_LOCATION,
                 drivetrain::addVisionMeasurement,
                 () -> drivetrain.getCachedState().Pose,
-                () -> drivetrain.getCachedState().Velocity)};
+                () -> drivetrain.getCachedState().Velocity)
+              };
 
   public RobotContainer(BiConsumer<Runnable, Double> addPeriodic) {
 

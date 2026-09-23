@@ -21,6 +21,7 @@ import com.ctre.phoenix6.signals.ReverseLimitTypeValue;
 import com.ctre.phoenix6.signals.ReverseLimitValue;
 
 import dev.doglog.DogLog;
+import frc.robot.RobotContainer;
 
 import org.wpilib.math.system.DCMotor;
 import org.wpilib.math.system.Models;
@@ -62,7 +63,19 @@ public class ClimberSubsystem extends SubsystemBase {
   private double goalRotation;
 
   public ClimberSubsystem(CANBus canBus) {
-    motor1 = new TalonFX(ClimberConstants.MOTOR_1_ID, canBus);
+    switch(RobotContainer.getRobot()) {
+      case SIM:
+        motor1 = new TalonFX(ClimberConstants.MOTOR_1_ID, canBus);
+        break;
+      case KITBOT:
+      case ANEMONE:
+      case DEV:
+      case COMP:
+      default:
+        motor1 = TalonFX.none();
+        break;
+    }
+    
 
     motor1Voltage = motor1.getMotorVoltage();
     motor1StatorCurrent = motor1.getStatorCurrent();

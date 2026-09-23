@@ -13,6 +13,9 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import dev.doglog.DogLog;
+import frc.robot.RobotContainer;
+import frc.robot.subsystems.groundIntakeRoller.GroundIntakeRollerConstants;
+
 import org.wpilib.command2.Command;
 import org.wpilib.command2.Commands;
 import org.wpilib.command2.SubsystemBase;
@@ -35,7 +38,18 @@ public class IndexerSubsystem extends SubsystemBase {
       new Alert("Indexer Motor 1 Not Connected ", Alert.Level.HIGH);  
 
   public IndexerSubsystem(CANBus canBus) {
-    motor1 = new TalonFX(IndexerConstants.MOTOR_1_ID, canBus);
+    switch(RobotContainer.getRobot()) {
+      case KITBOT:
+      case ANEMONE:
+      case DEV:
+        motor1 = TalonFX.none();
+        break;
+      case SIM:
+      case COMP:
+      default:
+        motor1 = new TalonFX(IndexerConstants.MOTOR_1_ID, canBus);
+        break;
+    }
 
     motor1Voltage = motor1.getMotorVoltage();
     motor1StatorCurrent = motor1.getStatorCurrent();

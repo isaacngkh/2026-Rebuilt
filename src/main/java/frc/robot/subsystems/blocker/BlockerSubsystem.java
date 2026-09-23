@@ -14,6 +14,7 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import dev.doglog.DogLog;
+import frc.robot.RobotContainer;
 
 import org.wpilib.command2.Command;
 import org.wpilib.command2.SubsystemBase;
@@ -47,7 +48,20 @@ public class BlockerSubsystem extends SubsystemBase {
   /** Creates a new blocker. */
   public BlockerSubsystem(CANBus canBus) {
 
-    motor1 = new TalonFX(BlockerConstants.MOTOR_1_ID, canBus);
+    switch(RobotContainer.getRobot()) {
+      case SIM:
+        motor1 = new TalonFX(BlockerConstants.MOTOR_1_ID, canBus);
+        break;
+      case KITBOT:
+      case ANEMONE:
+      case DEV:
+      case COMP:
+      default:
+        motor1 = TalonFX.none();
+        break;
+    }
+
+    
 
     motor1Voltage = motor1.getMotorVoltage();
     motor1StatorCurrent = motor1.getStatorCurrent();

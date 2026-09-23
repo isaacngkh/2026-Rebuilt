@@ -24,7 +24,10 @@ import org.wpilib.command2.button.Trigger;
 import org.wpilib.driverstation.Alert;
 
 import frc.robot.EagleUtil;
+import frc.robot.RobotContainer;
 import frc.robot.ShotCalculator;
+import frc.robot.subsystems.indexer.IndexerConstants;
+
 import java.util.function.Supplier;
 
 public class ShooterSubsystem extends SubsystemBase {
@@ -107,12 +110,36 @@ public class ShooterSubsystem extends SubsystemBase {
 
   public ShooterSubsystem(
       CANBus canBus, Supplier<Pose2d> robotPose, Supplier<Pose2d> robotTarget) {
-    motor1 = new TalonFX(ShooterConstants.MOTOR_1_ID, canBus);
-    motor2 = new TalonFX(ShooterConstants.MOTOR_2_ID, canBus);
-    motor3 = new TalonFX(ShooterConstants.MOTOR_3_ID, canBus);
-    motor4 = new TalonFX(ShooterConstants.MOTOR_4_ID, canBus);
-    motor5 = new TalonFX(ShooterConstants.MOTOR_5_ID, canBus);
-    motor6 = new TalonFX(ShooterConstants.MOTOR_6_ID, canBus);
+    
+    switch(RobotContainer.getRobot()) {
+      case KITBOT:
+        motor1 = new TalonFX(ShooterConstants.MOTOR_1_ID, canBus);
+        motor2 = TalonFX.none();
+        motor3 = TalonFX.none();
+        motor4 = TalonFX.none();
+        motor5 = TalonFX.none();
+        motor6 = TalonFX.none();
+        break;
+      case ANEMONE:
+      case DEV:
+        motor1 = TalonFX.none();
+        motor2 = TalonFX.none();
+        motor3 = TalonFX.none();
+        motor4 = TalonFX.none();
+        motor5 = TalonFX.none();
+        motor6 = TalonFX.none();
+        break;
+      case SIM:
+      case COMP:
+      default:
+        motor1 = new TalonFX(ShooterConstants.MOTOR_1_ID, canBus);
+        motor2 = new TalonFX(ShooterConstants.MOTOR_2_ID, canBus);
+        motor3 = new TalonFX(ShooterConstants.MOTOR_3_ID, canBus);
+        motor4 = new TalonFX(ShooterConstants.MOTOR_4_ID, canBus);
+        motor5 = new TalonFX(ShooterConstants.MOTOR_5_ID, canBus);
+        motor6 = new TalonFX(ShooterConstants.MOTOR_6_ID, canBus);
+        break;
+    }
 
     motor1Voltage = motor1.getMotorVoltage();
     motor1StatorCurrent = motor1.getStatorCurrent();

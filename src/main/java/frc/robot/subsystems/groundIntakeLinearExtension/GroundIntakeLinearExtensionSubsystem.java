@@ -14,6 +14,9 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.SensorDirectionValue;
 
 import dev.doglog.DogLog;
+import frc.robot.RobotContainer;
+import frc.robot.subsystems.climber.ClimberConstants;
+
 import org.wpilib.command2.Command;
 import org.wpilib.command2.Commands;
 import org.wpilib.command2.SubsystemBase;
@@ -46,10 +49,20 @@ public class GroundIntakeLinearExtensionSubsystem extends SubsystemBase {
   
 
   public GroundIntakeLinearExtensionSubsystem(CANBus canBus) {
-    motor = new TalonFX(GroundIntakeLinearExtensionConstants.MOTOR_ID, canBus);
-
-    groundIntakePivotEncoder =
-        new CANcoder(GroundIntakeLinearExtensionConstants.PIVOT_ENCODER_ID, canBus);
+    switch(RobotContainer.getRobot()) {
+      case KITBOT:
+      case ANEMONE:
+      case DEV:
+        motor = TalonFX.none();
+        groundIntakePivotEncoder = CANcoder.none();
+        break;
+      case SIM:
+      case COMP:
+      default:
+        motor = new TalonFX(ClimberConstants.MOTOR_1_ID, canBus);
+        groundIntakePivotEncoder = new CANcoder(GroundIntakeLinearExtensionConstants.PIVOT_ENCODER_ID, canBus);
+        break;
+    }
 
     motorVoltage = motor.getMotorVoltage();
     motorStatorCurrent = motor.getStatorCurrent();

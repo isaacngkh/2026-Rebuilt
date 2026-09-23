@@ -8,11 +8,16 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import dev.doglog.DogLog;
+import frc.robot.RobotContainer;
+import frc.robot.subsystems.climber.ClimberConstants;
+import frc.robot.subsystems.groundIntakeLinearExtension.GroundIntakeLinearExtensionConstants;
+
 import org.wpilib.command2.Command;
 import org.wpilib.command2.SubsystemBase;
 import org.wpilib.driverstation.Alert;
@@ -43,8 +48,21 @@ public class GroundIntakeRollerSubsystem extends SubsystemBase {
       new Alert("Ground Intake Roller Motor 2 Not Connected ", Alert.Level.HIGH);
 
   public GroundIntakeRollerSubsystem(CANBus canBus) {
-    motor1 = new TalonFX(GroundIntakeRollerConstants.MOTOR_1_ID, canBus);
-    motor2 = new TalonFX(GroundIntakeRollerConstants.MOTOR_2_ID, canBus);
+    switch(RobotContainer.getRobot()) {
+      case KITBOT:
+      case ANEMONE:
+      case DEV:
+        motor1 = TalonFX.none();
+        motor2 = TalonFX.none();
+        break;
+      case SIM:
+      case COMP:
+      default:
+        motor1 = new TalonFX(GroundIntakeRollerConstants.MOTOR_1_ID, canBus);
+        motor2 = new TalonFX(GroundIntakeRollerConstants.MOTOR_2_ID, canBus);
+        break;
+    }
+
 
     motor1Voltage = motor1.getMotorVoltage();
     motor1StatorCurrent = motor1.getStatorCurrent();

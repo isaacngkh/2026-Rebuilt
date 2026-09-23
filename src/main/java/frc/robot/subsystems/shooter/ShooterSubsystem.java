@@ -26,7 +26,6 @@ import org.wpilib.driverstation.Alert;
 import frc.robot.EagleUtil;
 import frc.robot.RobotContainer;
 import frc.robot.ShotCalculator;
-import frc.robot.subsystems.indexer.IndexerConstants;
 
 import java.util.function.Supplier;
 

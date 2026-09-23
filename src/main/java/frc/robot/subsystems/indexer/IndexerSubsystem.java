@@ -14,7 +14,6 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import dev.doglog.DogLog;
 import frc.robot.RobotContainer;
-import frc.robot.subsystems.groundIntakeRoller.GroundIntakeRollerConstants;
 
 import org.wpilib.command2.Command;
 import org.wpilib.command2.Commands;

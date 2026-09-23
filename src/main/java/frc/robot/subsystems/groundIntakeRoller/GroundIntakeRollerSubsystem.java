@@ -8,15 +8,12 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import dev.doglog.DogLog;
 import frc.robot.RobotContainer;
-import frc.robot.subsystems.climber.ClimberConstants;
-import frc.robot.subsystems.groundIntakeLinearExtension.GroundIntakeLinearExtensionConstants;
 
 import org.wpilib.command2.Command;
 import org.wpilib.command2.SubsystemBase;
